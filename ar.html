@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>WebXR AR 核心空间能力演示</title>
+  <title>WebXR AR - 增强调试版</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -12,6 +12,7 @@
       overflow: hidden;
       background: #1a1a2e;
       touch-action: manipulation;
+      -webkit-touch-callout: none;
     }
 
     #ar-button {
@@ -32,46 +33,68 @@
       z-index: 100;
     }
     
-    #ar-button:active {
-      transform: translateX(-50%) scale(0.95);
-    }
-    
-    #ar-button:disabled {
-      background: #555;
-      box-shadow: none;
-    }
+    #ar-button:active { transform: translateX(-50%) scale(0.95); }
+    #ar-button:disabled { background: #555; box-shadow: none; }
 
-    #status-bar {
+    /* 调试面板 */
+    #debug-panel {
       position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      z-index: 100;
-      pointer-events: none;
-    }
-
-    .status-pill {
-      background: rgba(0,0,0,0.7);
-      color: #fff;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.85);
+      color: #0f0;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      z-index: 999;
+      max-height: 200px;
+      overflow-y: auto;
       backdrop-filter: blur(10px);
       display: none;
-      white-space: nowrap;
+      line-height: 1.6;
     }
     
-    .status-pill.active {
-      display: block;
-      animation: fadeIn 0.3s;
+    #debug-panel.active { display: block; }
+    
+    .debug-good { color: #0f0; }
+    .debug-warn { color: #ff0; }
+    .debug-error { color: #f44; }
+    .debug-info { color: #0af; }
+
+    /* 提示信息 */
+    #hint {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 18px;
+      text-align: center;
+      z-index: 200;
+      pointer-events: none;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      transition: opacity 0.5s;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* Reticle 状态指示 */
+    #reticle-status {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(10px);
     }
+    
+    #reticle-status.active { display: block; }
 
     #dom-overlay {
       position: fixed;
@@ -83,9 +106,7 @@
       z-index: 200;
     }
     
-    #dom-overlay.active {
-      display: flex;
-    }
+    #dom-overlay.active { display: flex; }
 
     .overlay-btn {
       padding: 12px 20px;
@@ -97,71 +118,25 @@
       cursor: pointer;
       box-shadow: 0 4px 16px rgba(0,0,0,0.2);
       pointer-events: auto;
-      backdrop-filter: blur(10px);
     }
 
     .overlay-btn.danger {
       background: rgba(255,80,80,0.9);
       color: white;
     }
-
-    #light-info {
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      background: rgba(0,0,0,0.7);
-      color: #fff;
-      padding: 12px;
-      border-radius: 12px;
-      font-size: 11px;
-      display: none;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-      font-family: monospace;
-      pointer-events: none;
-    }
-    
-    #light-info.active {
-      display: block;
-    }
-
-    /* 调试日志面板 */
-    #debug-log {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.7);
-      color: #0f0;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 10px;
-      font-family: monospace;
-      max-height: 150px;
-      overflow-y: auto;
-      z-index: 300;
-      display: none;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
   <button id="ar-button" disabled>⏳ 检查 AR 支持...</button>
-
-  <div id="status-bar">
-    <div class="status-pill" id="pill-plane">📐 平面已检测</div>
-    <div class="status-pill" id="pill-hit">🎯 命中测试就绪</div>
-    <div class="status-pill" id="pill-anchor">⚓ 锚点已创建</div>
-    <div class="status-pill" id="pill-light">💡 光照已估计</div>
-    <div class="status-pill" id="pill-depth">📏 深度感知</div>
-  </div>
+  
+  <div id="debug-panel"></div>
+  <div id="hint"></div>
+  <div id="reticle-status">🔍 缓慢移动手机，扫描平面...</div>
 
   <div id="dom-overlay">
-    <button class="overlay-btn" id="btn-clear">🧹 清除所有</button>
-    <button class="overlay-btn danger" id="btn-exit">✕ 退出 AR</button>
+    <button class="overlay-btn" id="btn-clear">🧹 清除</button>
+    <button class="overlay-btn danger" id="btn-exit">✕ 退出</button>
   </div>
-
-  <div id="light-info"></div>
-  <div id="debug-log"></div>
 
   <script type="importmap">
     {
@@ -174,17 +149,41 @@
 
   <script type="module">
     import * as THREE from 'three';
-    import { XREstimatedLight } from 'three/addons/webxr/XREstimatedLight.js';
 
     // ==================== 调试日志 ====================
-    function debugLog(msg) {
-      console.log(msg);
-      const logEl = document.getElementById('debug-log');
-      if (logEl) {
-        logEl.style.display = 'block';
-        logEl.innerHTML += msg + '<br>';
-        logEl.scrollTop = logEl.scrollHeight;
+    const debugLines = [];
+    function debug(msg, type = 'info') {
+      const prefix = {
+        'good': '✅ ',
+        'warn': '⚠️ ',
+        'error': '❌ ',
+        'info': 'ℹ️ '
+      }[type] || '';
+      
+      console.log(prefix + msg);
+      debugLines.push({ msg: prefix + msg, type });
+      
+      const panel = document.getElementById('debug-panel');
+      if (panel) {
+        panel.classList.add('active');
+        panel.innerHTML = debugLines.map(l => 
+          `<span class="debug-${l.type}">${l.msg}</span>`
+        ).join('<br>');
+        panel.scrollTop = panel.scrollHeight;
       }
+    }
+
+    function showHint(text) {
+      const hint = document.getElementById('hint');
+      if (hint) {
+        hint.textContent = text;
+        hint.style.opacity = '1';
+      }
+    }
+
+    function hideHint() {
+      const hint = document.getElementById('hint');
+      if (hint) hint.style.opacity = '0';
     }
 
     // ==================== 全局状态 ====================
@@ -196,14 +195,43 @@
     let anchors = new Set();
     let placedObjects = [];
     let reticle;
-    let estimatedLight = null;
-    let lightEstimationEnabled = false;
     let defaultReferenceSpace;
+    let planeDetectionStartTime = null;
+    let planeDetectedEver = false;
     
     const supportedFeatures = new Set();
-    
-    // ==================== 初始化 Three.js ====================
+
+    // ==================== 初始化 ====================
     async function init() {
+      // ---- 诊断检查 ----
+      debug('=== 环境诊断 ===', 'info');
+      debug(`协议: ${window.location.protocol}`, 
+        window.location.protocol === 'https:' ? 'good' : 'error');
+      debug(`navigator.xr: ${!!navigator.xr}`, 
+        !!navigator.xr ? 'good' : 'error');
+      
+      if (!navigator.xr) {
+        debug('WebXR 不可用，请使用 Chrome 浏览器', 'error');
+        document.getElementById('ar-button').textContent = '❌ 需要 Chrome 浏览器';
+        return;
+      }
+
+      try {
+        const supported = await navigator.xr.isSessionSupported('immersive-ar');
+        debug(`immersive-ar 支持: ${supported}`, supported ? 'good' : 'error');
+        
+        if (!supported) {
+          debug('设备不支持 AR，请检查：', 'warn');
+          debug('  1. 是否安装了 Google Play Services for AR', 'warn');
+          debug('  2. 设备是否在 ARCore 支持列表中', 'warn');
+          document.getElementById('ar-button').textContent = '❌ 设备不支持 AR';
+          return;
+        }
+      } catch(e) {
+        debug('AR 检测失败: ' + e.message, 'error');
+      }
+
+      // ---- Three.js 初始化 ----
       renderer = new THREE.WebGLRenderer({ 
         antialias: true, 
         alpha: true,
@@ -216,381 +244,151 @@
 
       scene = new THREE.Scene();
       
-      camera = new THREE.PerspectiveCamera(
-        70, 
-        window.innerWidth / window.innerHeight, 
-        0.01, 
-        100
-      );
+      camera = new THREE.PerspectiveCamera(70, 
+        window.innerWidth / window.innerHeight, 0.01, 100);
       
-      // 默认光照（当光照估计不可用时使用）
-      defaultLight = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+      // 默认光照
+      defaultLight = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1.5);
       scene.add(defaultLight);
-      
-      defaultDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+      defaultDirectionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
       defaultDirectionalLight.position.set(1, 1, 1);
       scene.add(defaultDirectionalLight);
 
-      // ---- 光照估计（延迟初始化） ----
-      // 不在此时调用 enable()，等到 AR 会话创建后根据特性决定
-
-      // ---- Reticle ----
-      const reticleGeometry = new THREE.RingGeometry(0.08, 0.12, 32);
-      reticleGeometry.rotateX(-Math.PI / 2);
-      const reticleMaterial = new THREE.MeshBasicMaterial({
+      // ---- Reticle（增强可视性） ----
+      // 主圆环
+      const ringGeo = new THREE.RingGeometry(0.08, 0.12, 64);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({
         color: 0x667eea,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.7
+        opacity: 0.8
       });
-      reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      
+      // 中心点
+      const dotGeo = new THREE.CircleGeometry(0.02, 32);
+      dotGeo.rotateX(-Math.PI / 2);
+      const dotMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        side: THREE.DoubleSide
+      });
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      
+      // 组合 Reticle
+      reticle = new THREE.Group();
+      reticle.add(ring);
+      reticle.add(dot);
       reticle.matrixAutoUpdate = false;
       reticle.visible = false;
       scene.add(reticle);
 
-      await checkARSupport();
+      // 启用按钮
+      document.getElementById('ar-button').textContent = '🚀 进入 AR';
+      document.getElementById('ar-button').disabled = false;
+      document.getElementById('ar-button').onclick = startAR;
+      
       window.addEventListener('resize', onWindowResize);
-      
-      debugLog('✅ 初始化完成，等待用户进入 AR');
+      debug('初始化完成，等待用户操作', 'good');
     }
 
-    // ==================== AR 支持检测 ====================
-    async function checkARSupport() {
-      const button = document.getElementById('ar-button');
-      
-      if (!navigator.xr) {
-        button.textContent = '❌ 浏览器不支持 WebXR';
-        debugLog('❌ navigator.xr 不可用');
-        return;
-      }
-
-      try {
-        const supported = await navigator.xr.isSessionSupported('immersive-ar');
-        if (supported) {
-          button.textContent = '🚀 进入 AR 体验';
-          button.disabled = false;
-          button.onclick = startAR;
-          debugLog('✅ 设备支持沉浸式 AR');
-        } else {
-          button.textContent = '❌ 设备不支持 AR';
-          debugLog('❌ immersive-ar 不支持');
-        }
-      } catch (e) {
-        button.textContent = '❌ AR 检测失败';
-        debugLog('❌ 检测错误: ' + e.message);
-      }
-    }
-
-    // ==================== 启动 AR 会话 ====================
+    // ==================== 启动 AR ====================
     async function startAR() {
       const button = document.getElementById('ar-button');
-      button.textContent = '⏳ 启动中...';
-      button.disabled = true;
+      button.style.display = 'none';
+      
+      debug('正在启动 AR 会话...', 'info');
 
-      // 请求所有可能的特性（每个都是可选的，除了 required）
       const sessionInit = {
         requiredFeatures: ['local-floor', 'hit-test'],
-        optionalFeatures: [
-          'anchors',
-          'light-estimation',
-          'depth-sensing',
-          'dom-overlay'
-        ]
+        optionalFeatures: ['anchors', 'light-estimation', 'depth-sensing']
       };
-
-      // 添加 DOM 叠加层
-      const overlay = document.getElementById('dom-overlay');
-      if (overlay) {
-        sessionInit.domOverlay = { root: overlay };
-      }
 
       try {
         arSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
         
-        debugLog('✅ AR 会话创建成功');
-        debugLog('📋 启用的特性: ' + (arSession.enabledFeatures?.join(', ') || '无'));
+        debug('AR 会话已创建', 'good');
+        debug(`启用特性: ${arSession.enabledFeatures?.join(', ') || '无'}`, 'info');
         
-        // 记录支持的特性
         arSession.enabledFeatures?.forEach(f => supportedFeatures.add(f));
-        
-        // 更新状态指示器
-        if (supportedFeatures.has('hit-test')) showPill('pill-hit');
-        if (supportedFeatures.has('light-estimation')) showPill('pill-light');
-        if (supportedFeatures.has('depth-sensing')) showPill('pill-depth');
 
-        // ---- 事件监听 ----
+        // 关键检查
+        if (!supportedFeatures.has('hit-test')) {
+          debug('设备不支持命中测试！这是检测不到平面的根本原因', 'error');
+          debug('请确认 ARCore 已更新到最新版本', 'warn');
+        } else {
+          debug('命中测试功能已就绪', 'good');
+        }
+
+        // 监听会话事件
         arSession.addEventListener('end', onSessionEnd);
         arSession.addEventListener('select', onSelect);
-        arSession.addEventListener('inputsourceschange', onInputSourcesChange);
+        
+        // 监听会话状态变化（检测跟踪质量）
+        arSession.addEventListener('visibilitychange', (e) => {
+          debug(`会话可见性: ${arSession.visibilityState}`, 'info');
+        });
 
-        // ---- 设置 Three.js 渲染器（先设置，再处理光照） ----
+        // 设置渲染器
         await renderer.xr.setSession(arSession);
         
         // 获取参考空间
         defaultReferenceSpace = await arSession.requestReferenceSpace('local-floor');
-        
-        // ---- 命中测试 ----
+        debug('参考空间: local-floor', 'good');
+
+        // 创建命中测试源
         if (supportedFeatures.has('hit-test')) {
+          // 注意：使用 'viewer' 空间作为命中测试源
           const viewerSpace = await arSession.requestReferenceSpace('viewer');
-          hitTestSource = await arSession.requestHitTestSource({ space: viewerSpace });
+          hitTestSource = await arSession.requestHitTestSource({ 
+            space: viewerSpace 
+          });
           hitTestSourceRequested = true;
-          debugLog('🎯 命中测试源已创建');
+          debug('命中测试源已创建，类型: viewer-space', 'good');
         }
 
-        // ---- 光照估计（关键修复） ----
-        // 只在会话明确支持 light-estimation 时才创建和启用
-        if (supportedFeatures.has('light-estimation')) {
-          try {
-            estimatedLight = new XREstimatedLight(renderer);
-            
-            estimatedLight.addEventListener('estimationstart', () => {
-              debugLog('💡 光照估计已启动 - 替换默认光照');
-              // 移除默认光照
-              scene.remove(defaultLight);
-              scene.remove(defaultDirectionalLight);
-              // 添加估计光照
-              scene.add(estimatedLight);
-              lightEstimationEnabled = true;
-              showPill('pill-light');
-            });
-            
-            estimatedLight.addEventListener('estimationend', () => {
-              debugLog('💡 光照估计已停止 - 恢复默认光照');
-              // 移除估计光照
-              scene.remove(estimatedLight);
-              // 恢复默认光照
-              scene.add(defaultLight);
-              scene.add(defaultDirectionalLight);
-              lightEstimationEnabled = false;
-              hidePill('pill-light');
-              
-              // 隐藏光照信息面板
-              document.getElementById('light-info')?.classList.remove('active');
-            });
-
-            // 在 setSession 之后调用 enable
-            await estimatedLight.enable(arSession);
-            debugLog('✅ 光照估计已启用');
-            
-          } catch (lightError) {
-            debugLog('⚠️ 光照估计启用失败: ' + lightError.message);
-            estimatedLight = null;
-            hidePill('pill-light');
-          }
-        } else {
-          debugLog('ℹ️ 设备不支持光照估计，使用默认光照');
-          estimatedLight = null;
-        }
-
-        // ---- 绑定 DOM 按钮 ----
-        document.getElementById('btn-clear').onclick = clearAllObjects;
-        document.getElementById('btn-exit').onclick = () => arSession.end();
+        // 显示 UI
+        document.getElementById('dom-overlay').classList.add('active');
+        document.getElementById('reticle-status').classList.add('active');
         
-        overlay.classList.add('active');
-        button.style.display = 'none';
+        // 显示扫描提示
+        showHint('📱 缓慢移动手机\n对准桌面或地面');
+        planeDetectionStartTime = performance.now();
         
-        // 开始渲染循环
+        // 开始渲染
         arSession.requestAnimationFrame(onXRFrame);
         
-        debugLog('🚀 AR 体验已启动，请对准平面');
+        debug('AR 体验已启动！', 'good');
+        debug('请缓慢移动手机对准平面...', 'info');
 
       } catch (error) {
-        debugLog('❌ 启动 AR 失败: ' + error.message);
-        console.error('启动 AR 详细错误:', error);
-        button.textContent = '❌ 启动失败，请重试';
+        debug('启动失败: ' + error.message, 'error');
+        console.error(error);
+        button.style.display = 'block';
+        button.textContent = '❌ 启动失败，重试';
         button.disabled = false;
-        
-        // 清理可能部分创建的会话
-        if (arSession) {
-          try { arSession.end(); } catch(e) {}
-          arSession = null;
-        }
       }
-    }
-
-    // ==================== 会话结束 ====================
-    function onSessionEnd() {
-      debugLog('🔚 AR 会话已结束');
-      
-      // 清理光照估计
-      if (estimatedLight && lightEstimationEnabled) {
-        try {
-          scene.remove(estimatedLight);
-          scene.add(defaultLight);
-          scene.add(defaultDirectionalLight);
-        } catch(e) {}
-        lightEstimationEnabled = false;
-      }
-      
-      // 重置状态
-      hitTestSource = null;
-      hitTestSourceRequested = false;
-      anchors.forEach(a => { try { a.delete(); } catch(e) {} });
-      anchors.clear();
-      placedObjects.forEach(obj => scene.remove(obj));
-      placedObjects = [];
-      reticle.visible = false;
-      estimatedLight = null;
-      arSession = null;
-      
-      // 隐藏 UI
-      document.getElementById('dom-overlay')?.classList.remove('active');
-      document.querySelectorAll('.status-pill').forEach(p => p.classList.remove('active'));
-      document.getElementById('light-info')?.classList.remove('active');
-      
-      // 恢复按钮
-      const button = document.getElementById('ar-button');
-      button.textContent = '🚀 再次进入 AR';
-      button.style.display = 'block';
-      button.disabled = false;
-    }
-
-    // ==================== 输入源变化 ====================
-    function onInputSourcesChange(event) {
-      event.added.forEach(source => {
-        debugLog('🖐️ 输入源: ' + (source.handedness || '触摸屏'));
-      });
-    }
-
-    // ==================== 选择事件（放置物体） ====================
-    function onSelect(event) {
-      if (!reticle.visible) {
-        debugLog('⚠️ 未检测到平面');
-        return;
-      }
-
-      const position = new THREE.Vector3();
-      const quaternion = new THREE.Quaternion();
-      const scale = new THREE.Vector3();
-      reticle.matrix.decompose(position, quaternion, scale);
-      
-      createObjectAtPosition(position, quaternion);
-    }
-
-    // ==================== 创建展示物体 ====================
-    function createObjectAtPosition(position, quaternion) {
-      const type = Math.floor(Math.random() * 3);
-      let mesh;
-
-      switch(type) {
-        case 0:
-          const geo1 = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-          const mat1 = new THREE.MeshStandardMaterial({ 
-            color: new THREE.Color().setHSL(Math.random(), 0.8, 0.5),
-            roughness: 0.3,
-            metalness: 0.5
-          });
-          mesh = new THREE.Mesh(geo1, mat1);
-          mesh.name = '立方体';
-          break;
-
-        case 1:
-          const geo2 = new THREE.SphereGeometry(0.06, 32, 32);
-          const mat2 = new THREE.MeshStandardMaterial({ 
-            color: new THREE.Color().setHSL(Math.random(), 0.9, 0.6),
-            roughness: 0.2,
-            metalness: 0.8
-          });
-          mesh = new THREE.Mesh(geo2, mat2);
-          mesh.name = '球体';
-          break;
-
-        case 2:
-          const geo3 = new THREE.TorusGeometry(0.05, 0.02, 16, 32);
-          const mat3 = new THREE.MeshStandardMaterial({ 
-            color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5),
-            roughness: 0.4,
-            metalness: 0.3
-          });
-          mesh = new THREE.Mesh(geo3, mat3);
-          mesh.name = '圆环';
-          break;
-      }
-
-      mesh.position.copy(position);
-      mesh.quaternion.copy(quaternion);
-      
-      mesh.userData = {
-        startY: position.y,
-        floatOffset: Math.random() * Math.PI * 2,
-        floatSpeed: 0.5 + Math.random() * 1.5,
-        rotateSpeed: 0.3 + Math.random() * 1.0,
-        createdAt: performance.now()
-      };
-
-      scene.add(mesh);
-      placedObjects.push(mesh);
-
-      // 创建锚点
-      if (supportedFeatures.has('anchors') && arSession) {
-        createAnchor(position, quaternion);
-      }
-
-      debugLog(`📦 已放置 ${mesh.name}`);
-      
-      // 短暂显示锚点指示器
-      showPill('pill-anchor');
-      setTimeout(() => hidePill('pill-anchor'), 3000);
-    }
-
-    // ==================== 创建锚点 ====================
-    async function createAnchor(position, quaternion) {
-      try {
-        const transform = new XRRigidTransform(
-          { x: position.x, y: position.y, z: position.z },
-          { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w }
-        );
-        
-        const anchor = await arSession.createAnchor(transform, defaultReferenceSpace);
-        anchors.add(anchor);
-        debugLog('⚓ 锚点已创建');
-        
-        anchor.addEventListener('update', () => {
-          debugLog('🔄 锚点位置更新');
-        });
-        
-      } catch (error) {
-        debugLog('⚠️ 锚点创建失败: ' + error.message);
-      }
-    }
-
-    // ==================== 清除所有物体 ====================
-    function clearAllObjects() {
-      placedObjects.forEach(obj => scene.remove(obj));
-      placedObjects = [];
-      
-      anchors.forEach(anchor => {
-        try { anchor.delete(); } catch(e) {}
-      });
-      anchors.clear();
-      
-      debugLog('🧹 已清除所有物体和锚点');
     }
 
     // ==================== 渲染循环 ====================
     function onXRFrame(time, frame) {
       if (!arSession) return;
-      
-      const session = frame.session;
-      
-      // ---- 1. 光照估计更新 ----
-      if (lightEstimationEnabled && estimatedLight && supportedFeatures.has('light-estimation')) {
-        try {
-          const lightProbe = frame.getLightEstimate();
-          if (lightProbe && estimatedLight.lightProbe) {
-            estimatedLight.update(frame);
-            updateLightInfo(
-              estimatedLight.lightProbe.intensity,
-              estimatedLight.primaryLightColor
-            );
-          }
-        } catch(e) {
-          // 光照估计可能暂时失败，忽略
-        }
+
+      // ---- 1. 检查跟踪状态 ----
+      const trackingState = frame.getViewerPose(defaultReferenceSpace);
+      if (!trackingState) {
+        // 跟踪丢失
+        const elapsed = planeDetectionStartTime ? 
+          ((performance.now() - planeDetectionStartTime) / 1000).toFixed(1) : 0;
+        document.getElementById('reticle-status').textContent = 
+          `⚠️ 跟踪丢失 (已等待${elapsed}s)... 请增加环境光线`;
+        reticle.visible = false;
       }
 
       // ---- 2. 命中测试 ----
-      if (hitTestSourceRequested && hitTestSource) {
+      let hitDetected = false;
+      
+      if (hitTestSourceRequested && hitTestSource && frame) {
         try {
           const hitTestResults = frame.getHitTestResults(hitTestSource);
           
@@ -601,74 +399,129 @@
             if (pose) {
               reticle.visible = true;
               reticle.matrix.fromArray(pose.transform.matrix);
-              showPill('pill-plane');
+              hitDetected = true;
+              
+              if (!planeDetectedEver) {
+                planeDetectedEver = true;
+                const detectTime = ((performance.now() - planeDetectionStartTime) / 1000).toFixed(1);
+                debug(`平面已检测到！耗时 ${detectTime}秒`, 'good');
+                hideHint();
+                document.getElementById('reticle-status').textContent = 
+                  '✅ 平面已检测，点击放置物体';
+              }
             }
-          } else {
-            reticle.visible = false;
-            hidePill('pill-plane');
           }
         } catch(e) {
-          reticle.visible = false;
+          // 命中测试可能暂时失败
         }
       }
 
-      // ---- 3. 深度感知 ----
-      if (supportedFeatures.has('depth-sensing')) {
-        try {
-          const depthInfo = frame.getDepthInformation();
-          if (depthInfo) {
-            showPill('pill-depth');
-            const centerX = Math.floor(depthInfo.width / 2);
-            const centerY = Math.floor(depthInfo.height / 2);
-            const centerDepth = depthInfo.getDepthInMeters(centerX, centerY);
-            // 可用于遮挡逻辑
-          }
-        } catch(e) {
-          // 深度数据可能暂时不可用
-        }
+      if (!hitDetected && !planeDetectedEver) {
+        reticle.visible = false;
+        const elapsed = planeDetectionStartTime ? 
+          ((performance.now() - planeDetectionStartTime) / 1000).toFixed(1) : 0;
+        
+        // 根据时间给出不同提示
+        let statusText = '🔍 缓慢移动手机，扫描平面...';
+        if (elapsed > 5) statusText = '💡 确保环境光线充足，对准纹理丰富的表面';
+        if (elapsed > 10) statusText = '⚠️ 仍未检测到平面，请尝试：换个角度/增强光线/对准有纹理的地面';
+        
+        document.getElementById('reticle-status').textContent = statusText;
       }
 
-      // ---- 4. 物体动画 ----
+      // ---- 3. 物体动画 ----
       const now = performance.now() / 1000;
       placedObjects.forEach(obj => {
-        if (obj.userData.floatOffset !== undefined) {
+        if (obj.userData.startY !== undefined) {
           obj.position.y = obj.userData.startY + 
             Math.sin(now * obj.userData.floatSpeed + obj.userData.floatOffset) * 0.01;
           obj.rotation.y += obj.userData.rotateSpeed * 0.01;
         }
       });
 
-      // ---- 5. 渲染 ----
+      // ---- 4. 渲染 ----
       renderer.render(scene, camera);
-      
-      session.requestAnimationFrame(onXRFrame);
+      arSession.requestAnimationFrame(onXRFrame);
     }
 
-    // ==================== 辅助函数 ====================
-    function showPill(id) {
-      document.getElementById(id)?.classList.add('active');
+    // ==================== 放置物体 ====================
+    function onSelect(event) {
+      if (!reticle.visible) {
+        debug('未检测到平面，无法放置', 'warn');
+        return;
+      }
+
+      const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      reticle.matrix.decompose(position, quaternion, scale);
+      
+      // 创建物体
+      const geo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      const mat = new THREE.MeshStandardMaterial({ 
+        color: new THREE.Color().setHSL(Math.random(), 0.8, 0.5),
+        roughness: 0.3,
+        metalness: 0.5
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(position);
+      mesh.quaternion.copy(quaternion);
+      mesh.userData = {
+        startY: position.y,
+        floatOffset: Math.random() * Math.PI * 2,
+        floatSpeed: 0.5 + Math.random() * 1.5,
+        rotateSpeed: 0.3 + Math.random()
+      };
+      
+      scene.add(mesh);
+      placedObjects.push(mesh);
+      debug(`物体已放置在 (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`, 'good');
+
+      // 创建锚点
+      if (supportedFeatures.has('anchors') && arSession) {
+        try {
+          const transform = new XRRigidTransform(
+            { x: position.x, y: position.y, z: position.z },
+            { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w }
+          );
+          arSession.createAnchor(transform, defaultReferenceSpace).then(anchor => {
+            anchors.add(anchor);
+            debug('锚点已创建', 'good');
+          });
+        } catch(e) {
+          debug('锚点创建失败: ' + e.message, 'warn');
+        }
+      }
     }
 
-    function hidePill(id) {
-      document.getElementById(id)?.classList.remove('active');
+    // ==================== 清理 ====================
+    function clearAllObjects() {
+      placedObjects.forEach(obj => scene.remove(obj));
+      placedObjects = [];
+      anchors.forEach(a => { try { a.delete(); } catch(e) {} });
+      anchors.clear();
+      debug('已清除所有物体', 'info');
     }
 
-    function updateLightInfo(intensity, color) {
-      const panel = document.getElementById('light-info');
-      if (!panel) return;
+    function onSessionEnd() {
+      debug('AR 会话结束', 'info');
+      hitTestSource = null;
+      hitTestSourceRequested = false;
+      planeDetectedEver = false;
+      planeDetectionStartTime = null;
+      anchors.forEach(a => { try { a.delete(); } catch(e) {} });
+      anchors.clear();
+      clearAllObjects();
+      reticle.visible = false;
+      arSession = null;
       
-      panel.classList.add('active');
+      document.getElementById('dom-overlay').classList.remove('active');
+      document.getElementById('reticle-status').classList.remove('active');
+      hideHint();
       
-      const r = Math.round((color?.r || 1) * 255);
-      const g = Math.round((color?.g || 1) * 255);
-      const b = Math.round((color?.b || 1) * 255);
-      
-      panel.innerHTML = `
-        💡 强度: ${(intensity || 0).toFixed(2)}<br>
-        🎨 色温: rgb(${r},${g},${b})
-        <span style="display:inline-block;width:12px;height:12px;
-          background:rgb(${r},${g},${b});border-radius:50%;vertical-align:middle;margin-left:4px;"></span>
-      `;
+      document.getElementById('ar-button').style.display = 'block';
+      document.getElementById('ar-button').textContent = '🚀 再次进入 AR';
+      document.getElementById('ar-button').disabled = false;
     }
 
     function onWindowResize() {
@@ -678,9 +531,7 @@
     }
 
     // ==================== 启动 ====================
-    init().then(() => {
-      debugLog('📋 检测到的核心能力将显示在顶部状态栏');
-    });
+    init();
   </script>
 </body>
 </html>
