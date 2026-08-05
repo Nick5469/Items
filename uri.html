@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>应用唤醒工坊 · 100 URI × 4种跳转</title>
+  <title>Unity应用唤醒工坊 · 100 URI × 5种跳转</title>
   <style>
     * {
       margin: 0;
@@ -46,6 +46,16 @@
       border-radius: 20px;
       margin-left: 0.25rem;
     }
+    .unity-badge {
+      background: #1a1a2e;
+      color: #e2e8f0;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.2rem 0.9rem;
+      border-radius: 20px;
+      margin-left: 0.5rem;
+      border: 1px solid #3b3b5c;
+    }
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -75,7 +85,7 @@
       background: white;
       padding: 0.3rem 0.9rem;
       border-radius: 40px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 500;
       color: #1e293b;
       cursor: pointer;
@@ -87,11 +97,23 @@
       border-color: #2563eb;
       color: white;
     }
+    .method-btn.unity-method {
+      border-color: #7c3aed;
+      color: #5b21b6;
+    }
+    .method-btn.unity-method.active {
+      background: #7c3aed;
+      border-color: #7c3aed;
+      color: white;
+    }
     .method-btn:hover {
       background: #eef2f6;
     }
     .method-btn.active:hover {
       background: #1d4ed8;
+    }
+    .method-btn.unity-method.active:hover {
+      background: #6d28d9;
     }
     .desc {
       color: #334155;
@@ -109,6 +131,10 @@
       border-radius: 6px;
       font-size: 0.8rem;
       font-family: 'JetBrains Mono', monospace;
+    }
+    .desc .unity-hint {
+      color: #5b21b6;
+      font-weight: 500;
     }
     .grid {
       display: grid;
@@ -201,6 +227,15 @@
       background: #1d4ed8;
       border-color: #1d4ed8;
     }
+    .btn-unity {
+      background: #7c3aed;
+      color: white;
+      border-color: #7c3aed;
+    }
+    .btn-unity:hover {
+      background: #6d28d9;
+      border-color: #6d28d9;
+    }
     .btn-outline {
       background: transparent;
       border-color: #d0d8e3;
@@ -263,8 +298,9 @@
   <div class="container">
     <div class="header">
       <h1>
-        🧩 应用唤醒工坊
+        🎮 Unity 应用唤醒工坊
         <span class="badge">100 个 URI</span>
+        <span class="unity-badge">⚡ Unity WebView</span>
       </h1>
       <div class="toolbar">
         <label>⚡ 跳转方式</label>
@@ -273,6 +309,7 @@
           <button class="method-btn" data-method="iframe">iframe</button>
           <button class="method-btn" data-method="open">window.open</button>
           <button class="method-btn" data-method="assign">location.assign</button>
+          <button class="method-btn unity-method" data-method="unity">🎯 Unity JSB</button>
         </div>
       </div>
     </div>
@@ -282,7 +319,7 @@
 
     <div class="grid" id="appGrid"></div>
     <div class="footnote">
-      <span>⚠️ 部分 URI 需对应应用已安装。游戏 WebView 建议使用 JSBridge。</span>
+      <span>⚠️ Unity JSB 方式需在 Unity WebView 环境中使用，且 C# 端需实现 <code>OpenApp(string uri)</code> 方法。</span>
       <span style="display: flex; gap: 0.6rem;">
         <span>💡 点击卡片复制 URI</span>
       </span>
@@ -400,40 +437,76 @@
         { name: 'PyCharm', uri: 'pycharm://', tag: '常用' },
         { name: 'Docker', uri: 'docker://', tag: '常用' },
       ];
-      // 补全至100 (确保正好100个)
+      // 补全至100
       while (apps.length < 100) {
         apps.push({ name: `示例应用${apps.length+1}`, uri: `demo${apps.length}://`, tag: '占位' });
       }
       const list = apps.slice(0, 100);
 
-      // ---------- DOM 引用 ----------
+      // ---------- DOM ----------
       const grid = document.getElementById('appGrid');
       const toast = document.getElementById('toast');
       const descText = document.getElementById('descText');
       const methodBtns = document.querySelectorAll('.method-btn');
-      let currentMethod = 'location'; // 默认
+      let currentMethod = 'location';
 
-      // ---------- 方法描述映射 ----------
+      // ---------- 方法描述 ----------
       const methodInfo = {
         location: { label: 'location.href', desc: '📍 使用 <code>window.location.href = uri</code> (标准跳转，替换历史)' },
         iframe: { label: 'iframe', desc: '🖼️ 使用 <code>iframe.src = uri</code> (静默尝试，不离开页面)' },
         open: { label: 'window.open', desc: '🆕 使用 <code>window.open(uri, "_blank")</code> (新窗口/标签页)' },
         assign: { label: 'location.assign', desc: '📎 使用 <code>window.location.assign(uri)</code> (与 href 类似，保留历史)' },
+        unity: { label: 'Unity JSB', desc: '🎯 使用 <code>window.unityWebView.sendMessage</code> 或 <code>window.openAppInUnity(uri)</code> (Unity JSBridge)' },
       };
 
-      // ---------- 跳转执行函数 ----------
+      // ---------- Unity 跳转实现 ----------
+      function unityJump(uri) {
+        // 检测 Unity WebView 环境
+        const isUnity = typeof window.unityWebView !== 'undefined' || typeof window.openAppInUnity !== 'undefined';
+        
+        if (typeof window.openAppInUnity === 'function') {
+          // 方式1: 直接调用 Unity 暴露的全局函数
+          try {
+            window.openAppInUnity(uri);
+            showToast('✅ Unity JSB: openAppInUnity 调用成功');
+            return;
+          } catch (e) {
+            console.warn('openAppInUnity 调用失败:', e);
+          }
+        }
+        
+        if (typeof window.unityWebView !== 'undefined' && typeof window.unityWebView.sendMessage === 'function') {
+          // 方式2: 使用 uniwebview 的 sendMessage
+          try {
+            window.unityWebView.sendMessage('WebViewBridge', 'OpenApp', uri);
+            showToast('✅ Unity JSB: sendMessage 调用成功');
+            return;
+          } catch (e) {
+            console.warn('sendMessage 调用失败:', e);
+          }
+        }
+        
+        // 方式3: 尝试通过 location 调用自定义协议 (某些 Unity WebView 支持)
+        try {
+          // 部分 Unity WebView 会拦截 ms-appx:// 等协议
+          window.location.href = uri;
+          showToast('⚠️ 降级为 location.href (Unity JSB 不可用)');
+        } catch (e) {
+          showToast('❌ Unity JSB 不可用，且降级失败');
+        }
+      }
+
+      // ---------- 通用跳转 ----------
       function executeJump(uri, method) {
         switch (method) {
           case 'location':
             window.location.href = uri;
             break;
           case 'iframe': {
-            // 创建隐藏 iframe
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
             iframe.src = uri;
             document.body.appendChild(iframe);
-            // 2秒后移除
             setTimeout(() => {
               if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
             }, 3000);
@@ -444,6 +517,9 @@
             break;
           case 'assign':
             window.location.assign(uri);
+            break;
+          case 'unity':
+            unityJump(uri);
             break;
           default:
             window.location.href = uri;
@@ -456,7 +532,7 @@
         toast.textContent = msg;
         toast.classList.add('show');
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
       }
 
       function copyText(text) {
@@ -484,7 +560,7 @@
         document.body.removeChild(ta);
       }
 
-      // ---------- 渲染卡片 ----------
+      // ---------- 渲染 ----------
       function buildCard(app) {
         const card = document.createElement('div');
         card.className = 'card';
@@ -503,10 +579,11 @@
         const btnWrap = document.createElement('div');
         btnWrap.className = 'btn-wrap';
 
-        // 唤醒按钮 —— 使用当前方法
+        // 唤醒按钮
         const wakeBtn = document.createElement('button');
-        wakeBtn.className = 'btn btn-primary';
-        wakeBtn.textContent = '⚡ 唤醒';
+        const isUnityMethod = currentMethod === 'unity';
+        wakeBtn.className = `btn ${isUnityMethod ? 'btn-unity' : 'btn-primary'}`;
+        wakeBtn.textContent = isUnityMethod ? '🎯 Unity唤醒' : '⚡ 唤醒';
         wakeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           executeJump(app.uri, currentMethod);
@@ -545,10 +622,10 @@
         // 更新描述
         const info = methodInfo[method];
         if (info) {
-          descText.innerHTML = `⚡ 当前使用 <code>${info.label}</code> — ${info.desc.replace(/<code>.*?<\/code>/, '')}`;
-          // 重新构造显示更准确
           descText.innerHTML = `⚡ 当前使用 <code>${info.label}</code> — ${info.desc}`;
         }
+        // 重新渲染卡片（更新按钮样式）
+        render();
       }
 
       // ---------- 事件绑定 ----------
@@ -573,13 +650,27 @@
         }
       });
 
+      // ---------- 环境检测（Unity） ----------
+      function detectUnity() {
+        const isUnity = typeof window.unityWebView !== 'undefined' || typeof window.openAppInUnity !== 'undefined';
+        if (isUnity) {
+          const unityMsg = document.createElement('div');
+          unityMsg.style.cssText = 'background:#ede9fe;color:#5b21b6;padding:0.5rem 1rem;border-radius:12px;margin-bottom:1rem;font-size:0.85rem;border:1px solid #c4b5fd;';
+          unityMsg.innerHTML = '🎮 <strong>Unity 环境已检测到</strong> — JSBridge 已就绪，可使用 Unity JSB 方式唤醒应用。';
+          const desc = document.querySelector('.desc');
+          if (desc) desc.parentNode.insertBefore(unityMsg, desc);
+        }
+      }
+
       // ---------- 初始化 ----------
       render();
-      setMethod('location'); // 默认高亮
+      setMethod('location');
+      detectUnity();
 
-      // 暴露方法到全局方便调试
+      // 暴露到全局
       window.__setMethod = setMethod;
       window.__executeJump = executeJump;
+      window.__unityJump = unityJump;
 
     })();
   </script>
