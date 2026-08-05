@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>应用唤醒工坊 · 100 URI × 4种跳转</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #f5f7fb;
+      color: #1e293b;
+      padding: 1.5rem 1rem 4rem;
+    }
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem 1.5rem;
+      margin-bottom: 1.2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.3rem 1rem;
+    }
+    .badge {
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.2rem 0.9rem;
+      border-radius: 20px;
+      margin-left: 0.25rem;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      background: #ffffff;
+      padding: 0.5rem 1rem 0.5rem 1.2rem;
+      border-radius: 60px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      border: 1px solid #e9edf4;
+    }
+    .toolbar label {
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .method-group {
+      display: flex;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+    }
+    .method-btn {
+      border: 1px solid #d0d8e3;
+      background: white;
+      padding: 0.3rem 0.9rem;
+      border-radius: 40px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #1e293b;
+      cursor: pointer;
+      transition: 0.1s ease;
+      white-space: nowrap;
+    }
+    .method-btn.active {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: white;
+    }
+    .method-btn:hover {
+      background: #eef2f6;
+    }
+    .method-btn.active:hover {
+      background: #1d4ed8;
+    }
+    .desc {
+      color: #334155;
+      margin: 0.2rem 0 1.5rem 0;
+      border-left: 4px solid #3b82f6;
+      padding-left: 1rem;
+      background: #f8fafc;
+      border-radius: 0 8px 8px 0;
+      line-height: 1.6;
+      font-size: 0.9rem;
+    }
+    .desc code {
+      background: #e9edf4;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.85rem;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 0.9rem 0.9rem 0.8rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.03);
+      border: 1px solid #e9edf4;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      word-break: break-word;
+    }
+    .card:hover {
+      border-color: #b9c8e6;
+      box-shadow: 0 8px 18px rgba(0, 20, 60, 0.06);
+      transform: translateY(-2px);
+      background: #fcfdff;
+    }
+    .card .app-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.2rem;
+    }
+    .card .app-name .tag {
+      font-size: 0.6rem;
+      background: #eef2f6;
+      color: #475569;
+      padding: 0.1rem 0.5rem;
+      border-radius: 30px;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+    .card .uri {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.7rem;
+      background: #f1f4f9;
+      padding: 0.2rem 0.5rem;
+      border-radius: 10px;
+      color: #1e293b;
+      margin: 0.3rem 0 0.5rem 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid #e2e8f0;
+    }
+    .card .uri span {
+      opacity: 0.6;
+      font-weight: 300;
+    }
+    .btn-wrap {
+      margin-top: auto;
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: #eef2f6;
+      border: none;
+      padding: 0.3rem 0.9rem;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #1e293b;
+      cursor: pointer;
+      transition: 0.1s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      text-decoration: none;
+      border: 1px solid transparent;
+      flex: 1 0 auto;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+    }
+    .btn-outline {
+      background: transparent;
+      border-color: #d0d8e3;
+    }
+    .btn-outline:hover {
+      background: #e9edf4;
+    }
+    .btn-copy {
+      background: transparent;
+      border-color: #d0d8e3;
+      flex: 0.6;
+    }
+    .btn-copy:hover {
+      background: #e9edf4;
+    }
+    .btn:active {
+      transform: scale(0.96);
+    }
+    .footnote {
+      margin-top: 2.8rem;
+      font-size: 0.85rem;
+      border-top: 1px solid #dce2ec;
+      padding-top: 1.8rem;
+      color: #475569;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 0.6rem 1.8rem;
+      border-radius: 60px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      opacity: 0;
+      transition: 0.2s ease;
+      pointer-events: none;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.5rem; }
+      .toolbar { border-radius: 20px; padding: 0.6rem 1rem; width: 100%; }
+      .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>
+        🧩 应用唤醒工坊
+        <span class="badge">100 个 URI</span>
+      </h1>
+      <div class="toolbar">
+        <label>⚡ 跳转方式</label>
+        <div class="method-group" id="methodGroup">
+          <button class="method-btn active" data-method="location">location.href</button>
+          <button class="method-btn" data-method="iframe">iframe</button>
+          <button class="method-btn" data-method="open">window.open</button>
+          <button class="method-btn" data-method="assign">location.assign</button>
+        </div>
+      </div>
+    </div>
+    <div class="desc" id="methodDesc">
+      <span id="descText">📍 当前使用 <code>window.location.href = uri</code> (标准跳转，会替换当前历史)</span>
+    </div>
+
+    <div class="grid" id="appGrid"></div>
+    <div class="footnote">
+      <span>⚠️ 部分 URI 需对应应用已安装。游戏 WebView 建议使用 JSBridge。</span>
+      <span style="display: flex; gap: 0.6rem;">
+        <span>💡 点击卡片复制 URI</span>
+      </span>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">已复制</div>
+
+  <script>
+    (function() {
+      // ---------- 100 个应用 ----------
+      const apps = [
+        // 系统
+        { name: '设置', uri: 'ms-settings:', tag: '系统' },
+        { name: '网络 & Internet', uri: 'ms-settings:network', tag: '系统' },
+        { name: 'Wi-Fi 设置', uri: 'ms-settings:network-wifi', tag: '系统' },
+        { name: '蓝牙设置', uri: 'ms-settings:bluetooth', tag: '系统' },
+        { name: '个性化', uri: 'ms-settings:personalization', tag: '系统' },
+        { name: '应用', uri: 'ms-settings:appsfeatures', tag: '系统' },
+        { name: '存储', uri: 'ms-settings:storagesense', tag: '系统' },
+        { name: '电池', uri: 'ms-settings:batterysaver', tag: '系统' },
+        { name: '显示', uri: 'ms-settings:display', tag: '系统' },
+        { name: '声音', uri: 'ms-settings:sound', tag: '系统' },
+        { name: '通知', uri: 'ms-settings:notifications', tag: '系统' },
+        { name: '隐私-摄像头', uri: 'ms-settings:privacy-webcam', tag: '系统' },
+        { name: '隐私-麦克风', uri: 'ms-settings:privacy-microphone', tag: '系统' },
+        { name: '隐私-位置', uri: 'ms-settings:privacy-location', tag: '系统' },
+        { name: '更新 & 安全', uri: 'ms-settings:windowsupdate', tag: '系统' },
+        { name: '恢复', uri: 'ms-settings:recovery', tag: '系统' },
+        { name: '关于', uri: 'ms-settings:about', tag: '系统' },
+        { name: '任务管理器', uri: 'taskmanager:', tag: '系统' },
+        { name: '控制面板', uri: 'control:', tag: '系统' },
+        { name: '命令提示符', uri: 'cmd:', tag: '系统' },
+        { name: 'PowerShell', uri: 'powershell:', tag: '系统' },
+        { name: '文件资源管理器', uri: 'explorer:', tag: '系统' },
+        { name: '运行', uri: 'run:', tag: '系统' },
+        { name: 'Edge 浏览器', uri: 'microsoft-edge:', tag: '系统' },
+        { name: '默认浏览器', uri: 'https://www.bing.com', tag: '系统' },
+        { name: '邮件', uri: 'mailto:', tag: '系统' },
+        { name: '日历', uri: 'outlookcal:', tag: '系统' },
+        { name: '计算器', uri: 'calculator:', tag: '系统' },
+        { name: '闹钟 & 时钟', uri: 'ms-clock:', tag: '系统' },
+        { name: '相机', uri: 'camera:', tag: '系统' },
+        { name: '照片', uri: 'ms-photos:', tag: '系统' },
+        { name: '画图', uri: 'mspaint:', tag: '系统' },
+        { name: '录音机', uri: 'ms-soundrecorder:', tag: '系统' },
+        { name: '视频编辑器', uri: 'ms-videoeditor:', tag: '系统' },
+        { name: '截图工具', uri: 'snippingtool:', tag: '系统' },
+        { name: 'Microsoft Store', uri: 'ms-windows-store:', tag: '系统' },
+        { name: '天气', uri: 'msnweather:', tag: '系统' },
+        { name: '地图', uri: 'bingmaps:', tag: '系统' },
+        { name: 'Groove 音乐', uri: 'groove:', tag: '系统' },
+        { name: '电影和电视', uri: 'ms-film:', tag: '系统' },
+        { name: 'OneNote', uri: 'onenote:', tag: '系统' },
+        { name: 'Sticky Notes', uri: 'sticky:', tag: '系统' },
+        { name: '反馈中心', uri: 'feedback-hub:', tag: '系统' },
+        { name: '安全中心', uri: 'windowsdefender:', tag: '系统' },
+        { name: '电脑管理', uri: 'compmgmt:', tag: '系统' },
+        { name: '设备管理器', uri: 'devmgmt:', tag: '系统' },
+        { name: '磁盘管理', uri: 'diskmgmt:', tag: '系统' },
+        { name: '服务', uri: 'services:', tag: '系统' },
+        { name: '事件查看器', uri: 'eventvwr:', tag: '系统' },
+        { name: '性能监视器', uri: 'perfmon:', tag: '系统' },
+        // 常用
+        { name: '微信', uri: 'weixin://', tag: '常用' },
+        { name: 'QQ', uri: 'mqq://', tag: '常用' },
+        { name: '钉钉', uri: 'dingtalk://', tag: '常用' },
+        { name: '企业微信', uri: 'wxwork://', tag: '常用' },
+        { name: '飞书', uri: 'feishu://', tag: '常用' },
+        { name: '腾讯会议', uri: 'wemeet://', tag: '常用' },
+        { name: 'Zoom', uri: 'zoom://', tag: '常用' },
+        { name: 'Microsoft Teams', uri: 'msteams://', tag: '常用' },
+        { name: 'Slack', uri: 'slack://', tag: '常用' },
+        { name: 'Discord', uri: 'discord://', tag: '常用' },
+        { name: 'Telegram', uri: 'tg://', tag: '常用' },
+        { name: 'WhatsApp', uri: 'whatsapp://', tag: '常用' },
+        { name: 'Line', uri: 'line://', tag: '常用' },
+        { name: '支付宝', uri: 'alipay://', tag: '常用' },
+        { name: '淘宝', uri: 'taobao://', tag: '常用' },
+        { name: '京东', uri: 'openapp.jdmobile://', tag: '常用' },
+        { name: '抖音', uri: 'snssdk1128://', tag: '常用' },
+        { name: '快手', uri: 'kwai://', tag: '常用' },
+        { name: '微博', uri: 'sinaweibo://', tag: '常用' },
+        { name: '小红书', uri: 'xhsdiscover://', tag: '常用' },
+        { name: 'Bilibili', uri: 'bilibili://', tag: '常用' },
+        { name: '优酷', uri: 'youku://', tag: '常用' },
+        { name: '爱奇艺', uri: 'iqiyi://', tag: '常用' },
+        { name: '腾讯视频', uri: 'tenvideo://', tag: '常用' },
+        { name: '芒果TV', uri: 'mgtv://', tag: '常用' },
+        { name: '网易云音乐', uri: 'orpheus://', tag: '常用' },
+        { name: 'QQ音乐', uri: 'qqmusic://', tag: '常用' },
+        { name: '酷狗音乐', uri: 'kugou://', tag: '常用' },
+        { name: 'Spotify', uri: 'spotify://', tag: '常用' },
+        { name: 'Apple Music', uri: 'apple-music://', tag: '常用' },
+        { name: '百度网盘', uri: 'baiduyun://', tag: '常用' },
+        { name: 'WPS Office', uri: 'wps://', tag: '常用' },
+        { name: 'Notion', uri: 'notion://', tag: '常用' },
+        { name: 'Evernote', uri: 'evernote://', tag: '常用' },
+        { name: '有道云笔记', uri: 'youdaonote://', tag: '常用' },
+        { name: '石墨文档', uri: 'shimo://', tag: '常用' },
+        { name: '腾讯文档', uri: 'qqdocs://', tag: '常用' },
+        { name: '金山文档', uri: 'kdocs://', tag: '常用' },
+        { name: 'Adobe Acrobat', uri: 'acrobat://', tag: '常用' },
+        { name: 'VLC', uri: 'vlc://', tag: '常用' },
+        { name: 'PotPlayer', uri: 'potplayer://', tag: '常用' },
+        { name: 'Steam', uri: 'steam://', tag: '常用' },
+        { name: 'Epic Games', uri: 'com.epicgames.launcher://', tag: '常用' },
+        { name: 'Ubisoft Connect', uri: 'ubisoft://', tag: '常用' },
+        { name: 'Origin', uri: 'origin://', tag: '常用' },
+        { name: 'Battle.net', uri: 'battlenet://', tag: '常用' },
+        { name: 'Xbox', uri: 'xbox://', tag: '常用' },
+        { name: 'GitHub Desktop', uri: 'github-windows://', tag: '常用' },
+        { name: 'VS Code', uri: 'vscode://', tag: '常用' },
+        { name: 'IntelliJ IDEA', uri: 'intellij://', tag: '常用' },
+        { name: 'PyCharm', uri: 'pycharm://', tag: '常用' },
+        { name: 'Docker', uri: 'docker://', tag: '常用' },
+      ];
+      // 补全至100 (确保正好100个)
+      while (apps.length < 100) {
+        apps.push({ name: `示例应用${apps.length+1}`, uri: `demo${apps.length}://`, tag: '占位' });
+      }
+      const list = apps.slice(0, 100);
+
+      // ---------- DOM 引用 ----------
+      const grid = document.getElementById('appGrid');
+      const toast = document.getElementById('toast');
+      const descText = document.getElementById('descText');
+      const methodBtns = document.querySelectorAll('.method-btn');
+      let currentMethod = 'location'; // 默认
+
+      // ---------- 方法描述映射 ----------
+      const methodInfo = {
+        location: { label: 'location.href', desc: '📍 使用 <code>window.location.href = uri</code> (标准跳转，替换历史)' },
+        iframe: { label: 'iframe', desc: '🖼️ 使用 <code>iframe.src = uri</code> (静默尝试，不离开页面)' },
+        open: { label: 'window.open', desc: '🆕 使用 <code>window.open(uri, "_blank")</code> (新窗口/标签页)' },
+        assign: { label: 'location.assign', desc: '📎 使用 <code>window.location.assign(uri)</code> (与 href 类似，保留历史)' },
+      };
+
+      // ---------- 跳转执行函数 ----------
+      function executeJump(uri, method) {
+        switch (method) {
+          case 'location':
+            window.location.href = uri;
+            break;
+          case 'iframe': {
+            // 创建隐藏 iframe
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = uri;
+            document.body.appendChild(iframe);
+            // 2秒后移除
+            setTimeout(() => {
+              if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+            }, 3000);
+            break;
+          }
+          case 'open':
+            window.open(uri, '_blank');
+            break;
+          case 'assign':
+            window.location.assign(uri);
+            break;
+          default:
+            window.location.href = uri;
+        }
+      }
+
+      // ---------- Toast ----------
+      let toastTimer = null;
+      function showToast(msg = '已复制') {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text).then(() => showToast('已复制: ' + text))
+            .catch(() => fallbackCopy(text));
+        } else {
+          fallbackCopy(text);
+        }
+      }
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('已复制: ' + text);
+        } catch (e) {
+          showToast('复制失败');
+        }
+        document.body.removeChild(ta);
+      }
+
+      // ---------- 渲染卡片 ----------
+      function buildCard(app) {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'app-name';
+        nameDiv.innerHTML = `${app.name} <span class="tag">${app.tag || ''}</span>`;
+        card.appendChild(nameDiv);
+
+        const uriDiv = document.createElement('div');
+        uriDiv.className = 'uri';
+        uriDiv.title = app.uri;
+        uriDiv.innerHTML = `<span>🔗</span> ${app.uri}`;
+        card.appendChild(uriDiv);
+
+        const btnWrap = document.createElement('div');
+        btnWrap.className = 'btn-wrap';
+
+        // 唤醒按钮 —— 使用当前方法
+        const wakeBtn = document.createElement('button');
+        wakeBtn.className = 'btn btn-primary';
+        wakeBtn.textContent = '⚡ 唤醒';
+        wakeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          executeJump(app.uri, currentMethod);
+        });
+        btnWrap.appendChild(wakeBtn);
+
+        // 复制按钮
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn btn-copy';
+        copyBtn.textContent = '📋';
+        copyBtn.setAttribute('aria-label', '复制 URI');
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          copyText(app.uri);
+        });
+        btnWrap.appendChild(copyBtn);
+
+        card.appendChild(btnWrap);
+        return card;
+      }
+
+      function render() {
+        grid.innerHTML = '';
+        list.forEach(app => {
+          grid.appendChild(buildCard(app));
+        });
+      }
+
+      // ---------- 切换方法 ----------
+      function setMethod(method) {
+        currentMethod = method;
+        // 更新按钮状态
+        methodBtns.forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.method === method);
+        });
+        // 更新描述
+        const info = methodInfo[method];
+        if (info) {
+          descText.innerHTML = `⚡ 当前使用 <code>${info.label}</code> — ${info.desc.replace(/<code>.*?<\/code>/, '')}`;
+          // 重新构造显示更准确
+          descText.innerHTML = `⚡ 当前使用 <code>${info.label}</code> — ${info.desc}`;
+        }
+      }
+
+      // ---------- 事件绑定 ----------
+      methodBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const method = btn.dataset.method;
+          if (method && method !== currentMethod) {
+            setMethod(method);
+          }
+        });
+      });
+
+      // 点击卡片复制 URI
+      grid.addEventListener('click', (e) => {
+        const card = e.target.closest('.card');
+        if (!card) return;
+        if (e.target.closest('.btn')) return;
+        const uriEl = card.querySelector('.uri');
+        if (uriEl) {
+          const raw = uriEl.textContent.replace('🔗', '').trim();
+          copyText(raw);
+        }
+      });
+
+      // ---------- 初始化 ----------
+      render();
+      setMethod('location'); // 默认高亮
+
+      // 暴露方法到全局方便调试
+      window.__setMethod = setMethod;
+      window.__executeJump = executeJump;
+
+    })();
+  </script>
+</body>
+</html>
