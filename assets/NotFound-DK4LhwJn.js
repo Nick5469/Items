@@ -1,0 +1,1 @@
+import{B as e,c as t}from"./antd-core-DpQeXA0k.js";import{t as n}from"./react-core-DdSA_84E.js";import{s as r}from"./index-BsNZE44k.js";var i=n();function a(){return(0,i.jsx)(t,{status:`403`,title:`匠心筹备中`,subTitle:`您访问的页面正在紧锣密鼓地装修，稍后将以全新面貌与您见面。`,extra:(0,i.jsx)(e,{type:`primary`,href:r,children:`返回首页`}),style:{marginTop:`170px`}})}export{a as default};
