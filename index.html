@@ -7,25 +7,68 @@
          全面屏避让（顶部导航 + 每个页面首个组件的上边距）依赖它，见 App.css 的 --app-safe-top -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>quiz-app</title>
-    <script type="module" crossorigin src="/assets/index-CGcdLufa.js"></script>
+    <!-- 主题预置：必须在 React 挂载前同步执行。
+         主题偏好存在 IndexedDB 里（异步），等 React 读到要好几帧，
+         期间页面会先按默认值画一次——也就是每次刷新都闪一下浅色毛玻璃。
+         这里直接读 localStorage 的镜像（App.jsx 的 writeThemeCache 维护），
+         把三个维度的属性先写到 <html> 上，首帧就是用户选的主题。
+         脚本失败（隐私模式禁用存储 / JSON 损坏）时什么都不做，
+         React 挂载后会按数据库里的真实设置补上，只是会闪一下。 -->
+    <script>
+      (function () {
+        try {
+          var raw = window.localStorage.getItem('app-theme-preferences');
+          if (!raw) return;
+          var prefs = JSON.parse(raw) || {};
+          var root = document.documentElement;
+          var dark = prefs.themeMode === 'dark' || (
+            (prefs.themeMode === 'auto' || !prefs.themeMode) &&
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches
+          );
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          root.setAttribute('data-theme-style', prefs.themeStyle || 'glass');
+          if (prefs.accentColor) root.style.setProperty('--app-primary', prefs.accentColor);
+        } catch (error) {
+          /* 读不到镜像就交给 React，不影响启动 */
+        }
+      })();
+    </script>
+    <!-- 字号档位的首帧镜像：键名与 useFontScale 的 SCALE_CACHE_KEY 一致。
+         单独一段而不是并进上面的主题脚本：主题镜像损坏时字号仍要生效，
+         反过来也一样——两件事互不牵连。 -->
+    <script>
+      (function () {
+        try {
+          var raw = window.localStorage.getItem('appFontScaleCache');
+          if (!raw) return;
+          var scale = parseFloat(raw);
+          if (!isFinite(scale) || scale <= 0) return;
+          document.documentElement.style.setProperty('--font-scale', String(scale));
+        } catch (error) {
+          /* 读不到镜像就交给 React，不影响启动 */
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-Cvg-Nqjy.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-hePW80VL.js">
-    <link rel="modulepreload" crossorigin href="/assets/antd-core-B7tFKP1H.js">
-    <link rel="modulepreload" crossorigin href="/assets/antd-mobile-O39QeFnq.js">
-    <link rel="modulepreload" crossorigin href="/assets/charts-Ba_kR0xN.js">
-    <link rel="modulepreload" crossorigin href="/assets/antd-overlay-B2GkhC0o.js">
+    <link rel="modulepreload" crossorigin href="/assets/antd-core-EGcM7pcO.js">
+    <link rel="modulepreload" crossorigin href="/assets/antd-mobile-BEW6Dx58.js">
+    <link rel="modulepreload" crossorigin href="/assets/charts-B76WHS-O.js">
+    <link rel="modulepreload" crossorigin href="/assets/antd-overlay-BpSpZW_j.js">
     <link rel="modulepreload" crossorigin href="/assets/react-core-NZYk81nU.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor-DzWh3U8D.js">
-    <link rel="modulepreload" crossorigin href="/assets/antd-data-DH9CPAeW.js">
-    <link rel="modulepreload" crossorigin href="/assets/antd-form-DjmU_gJT.js">
-    <link rel="modulepreload" crossorigin href="/assets/antd-icons-DEInQpBD.js">
-    <link rel="modulepreload" crossorigin href="/assets/dnd-kit-ot4cayVB.js">
-    <link rel="modulepreload" crossorigin href="/assets/repositories-BVOmdJst.js">
-    <link rel="modulepreload" crossorigin href="/assets/settingsService-CK6ejhHF.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-ADMx7qkH.js">
+    <link rel="modulepreload" crossorigin href="/assets/antd-data-DfpRdl-3.js">
+    <link rel="modulepreload" crossorigin href="/assets/antd-form-Ct1A07W6.js">
+    <link rel="modulepreload" crossorigin href="/assets/antd-icons-S77aFiSz.js">
+    <link rel="modulepreload" crossorigin href="/assets/routes-G_1zkKFN.js">
+    <link rel="modulepreload" crossorigin href="/assets/dnd-kit-_Vj5oGrL.js">
+    <link rel="modulepreload" crossorigin href="/assets/repositories-DoLfEs4E.js">
+    <link rel="modulepreload" crossorigin href="/assets/settingsService-B5QQPu1J.js">
     <link rel="modulepreload" crossorigin href="/assets/date-utils-Cu18L1IR.js">
-    <link rel="modulepreload" crossorigin href="/assets/cacheService-CkWFZ7xO.js">
-    <link rel="modulepreload" crossorigin href="/assets/iconService-B5Jifucn.js">
-    <link rel="modulepreload" crossorigin href="/assets/IconRenderer-DtYn9TSs.js">
-    <link rel="modulepreload" crossorigin href="/assets/categoryService-CecGdqCC.js">
+    <link rel="modulepreload" crossorigin href="/assets/cacheService-CPdpcxMu.js">
+    <link rel="modulepreload" crossorigin href="/assets/iconService-CzAg28_I.js">
+    <link rel="modulepreload" crossorigin href="/assets/categoryService-BmNe07cA.js">
     <link rel="stylesheet" crossorigin href="/assets/antd-mobile.css">
     <link rel="stylesheet" crossorigin href="/assets/vendor.css">
     <link rel="stylesheet" crossorigin href="/assets/index.css">
