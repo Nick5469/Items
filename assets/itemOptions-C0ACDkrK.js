@@ -1,0 +1,1 @@
+var e={.5:`袖珍`,1:`轻便`,1.5:`标准`,2:`粗笨`,2.5:`庞大`},t=[{label:`在原位`,value:`idle`},{label:`使用中`,value:`in_use`},{label:`借出`,value:`borrowed`},{label:`已丢失`,value:`lost`},{label:`已过期`,value:`expired`}];export{t as n,e as t};
